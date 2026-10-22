@@ -1,0 +1,118 @@
+
+<%@ page import="java.sql.Connection,java.sql.DriverManager,java.sql.PreparedStatement,java.sql.ResultSet" %>
+
+<%
+    String navRole = (String) session.getAttribute("role");
+
+    boolean isAdmin = "ADMIN".equalsIgnoreCase(
+        navRole == null ? "" : navRole.trim()
+    );
+
+    boolean isStudent = "STUDENT".equalsIgnoreCase(
+        navRole == null ? "" : navRole.trim()
+    );
+
+    boolean isLoggedIn = session.getAttribute("userId") != null;
+
+    int headerUnreadCount = 0;
+
+    if (isStudent && isLoggedIn) {
+        try {
+            int currentUserId = Integer.parseInt(
+                String.valueOf(session.getAttribute("userId"))
+            );
+
+            Class.forName("oracle.jdbc.driver.OracleDriver");
+
+            try (
+                Connection notificationCon = DriverManager.getConnection(
+                    "jdbc:oracle:thin:@localhost:1521:XE",
+                    "system",
+                    "manager"
+                );
+
+                PreparedStatement notificationPs =
+                    notificationCon.prepareStatement(
+                        "SELECT COUNT(*) FROM NOTIFICATIONS " +
+                        "WHERE USER_ID = ? AND IS_READ = 'N'"
+                    )
+            ) {
+                notificationPs.setInt(1, currentUserId);
+
+                try (ResultSet notificationRs =
+                         notificationPs.executeQuery()) {
+
+                    if (notificationRs.next()) {
+                        headerUnreadCount = notificationRs.getInt(1);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            application.log(
+                "Unable to load header notification count", e
+            );
+        }
+    }
+%>
+
+<header class="site-header">
+    <nav class="navbar">
+
+        <a class="navbar-brand" href="index.jsp">
+            CampusEvents
+        </a>
+
+        <div class="navbar-links">
+
+            <% if (isAdmin) { %>
+
+                <a href="events.jsp">Events</a>
+                <a href="admin.jsp">Admin Dashboard</a>
+
+            <% } else { %>
+
+                <a href="index.jsp">Home</a>
+                <a href="events.jsp">Events</a>
+
+                <% if (isStudent && isLoggedIn) { %>
+                    <a href="userDashboard.jsp">My Dashboard</a>
+                    <a href="myRegistrations.jsp">My Registrations</a>
+                <% } %>
+
+            <% } %>
+
+            <% if (isStudent && isLoggedIn) { %>
+
+                <a class="notification-nav-link"
+                   href="notifications.jsp">
+
+                    <span aria-hidden="true">&#128276;</span>
+                    Notifications
+
+                    <% if (headerUnreadCount > 0) { %>
+                        <span class="notification-badge">
+                            <%= headerUnreadCount %>
+                        </span>
+                    <% } %>
+
+                </a>
+
+            <% } %>
+
+            <% if (isLoggedIn) { %>
+
+                <a class="logout-link" href="logout.jsp">
+                    Logout
+                </a>
+
+            <% } else { %>
+
+                <a href="login.jsp">Login</a>
+                <a href="register.jsp">Register</a>
+
+            <% } %>
+
+        </div>
+    </nav>
+</header>

@@ -1,0 +1,25 @@
+<%@ page import="java.sql.Connection,java.sql.PreparedStatement" %>
+
+<%!
+    public int notifyAllStudents(
+            Connection con,
+            String eventTitle,
+            String message,
+            String notificationType) throws Exception {
+
+        String sql =
+            "INSERT INTO NOTIFICATIONS " +
+            "(NOTIFICATION_ID, USER_ID, EVENT_TITLE, MESSAGE, " +
+            "NOTIFICATION_TYPE, IS_READ, CREATED_AT) " +
+            "SELECT NOTIFICATIONS_SEQ.NEXTVAL, USER_ID, ?, ?, ?, 'N', SYSDATE " +
+            "FROM USERS WHERE UPPER(TRIM(ROLE)) = 'STUDENT'";
+
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, eventTitle);
+            ps.setString(2, message);
+            ps.setString(3, notificationType);
+
+            return ps.executeUpdate();
+        }
+    }
+%>
